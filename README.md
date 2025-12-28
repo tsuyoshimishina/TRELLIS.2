@@ -70,12 +70,31 @@ Data processing is streamlined for instant conversions that are fully **renderin
     cd TRELLIS.2
     ```
 
-2. Install the dependencies:
+2. Install CUDA Toolkit 12.4 (if not already installed):
+
+    The CUDA extensions (nvdiffrast, flash-attn, etc.) require CUDA Toolkit 12.4 to match the PyTorch CUDA version. If your system has a different CUDA version (check with `nvcc --version`), install CUDA 12.4:
+    ```sh
+    # For Ubuntu 22.04
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+    sudo dpkg -i cuda-keyring_1.1-1_all.deb
+    sudo apt update
+    sudo apt install cuda-toolkit-12-4
+    ```
+
+    Then set the environment variables before running `setup.sh`:
+    ```sh
+    export CUDA_HOME=/usr/local/cuda-12.4
+    export PATH=$CUDA_HOME/bin:$PATH
+    ```
+
+    > **Note**: These environment variables are only required during the build process. Once the CUDA extensions are compiled, you don't need to set them when running inference (e.g., `example.py`).
+
+3. Install the dependencies:
     
     **Before running the following command there are somethings to note:**
+    - Make sure you have completed step 2 (CUDA Toolkit 12.4 installation and environment variable setup).
     - By adding `--new-env`, a new conda environment named `trellis2` will be created. If you want to use an existing conda environment, please remove this flag.
     - By default the `trellis2` environment will use pytorch 2.6.0 with CUDA 12.4. If you want to use a different version of CUDA, you can remove the `--new-env` flag and manually install the required dependencies. Refer to [PyTorch](https://pytorch.org/get-started/previous-versions/) for the installation command.
-    - If you have multiple CUDA Toolkit versions installed, `CUDA_HOME` should be set to the correct version before running the command. For example, if you have CUDA Toolkit 12.4 and 13.0 installed, you can run `export CUDA_HOME=/usr/local/cuda-12.4` before running the command.
     - By default, the code uses the `flash-attn` backend for attention. For GPUs do not support `flash-attn` (e.g., NVIDIA V100), you can install `xformers` manually and set the `ATTN_BACKEND` environment variable to `xformers` before running the code. See the [Minimal Example](#minimal-example) for more details.
     - The installation may take a while due to the large number of dependencies. Please be patient. If you encounter any issues, you can try to install the dependencies one by one, specifying one flag at a time.
     - If you encounter any issues during the installation, feel free to open an issue or contact us.

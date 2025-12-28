@@ -1,3 +1,6 @@
+# Exit immediately if any command fails
+set -e
+
 # Read Arguments
 TEMP=`getopt -o h --long help,new-env,basic,flash-attn,cumesh,o-voxel,flexgemm,nvdiffrast,nvdiffrec -n 'setup.sh' -- "$@"`
 
@@ -52,7 +55,8 @@ if [ "$HELP" = true ] ; then
     echo "  --flexgemm              Install flexgemm"
     echo "  --nvdiffrast            Install nvdiffrast"
     echo "  --nvdiffrec             Install nvdiffrec"
-    return
+    # Use 'exit' instead of 'return' for script execution (not sourced)
+    exit 0
 fi
 
 # Get system information
@@ -67,7 +71,11 @@ else
 fi
 
 if [ "$NEW_ENV" = true ] ; then
-    conda create -n trellis2 python=3.10
+    # Use -y flag to skip confirmation prompt
+    conda create -y -n trellis2 python=3.10
+    # Initialize conda for the current shell before activation
+    # This is required when running 'conda activate' in a script
+    source "$(conda info --base)/etc/profile.d/conda.sh"
     conda activate trellis2
     if [ "$PLATFORM" = "cuda" ] ; then
         pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
@@ -80,13 +88,18 @@ if [ "$BASIC" = true ] ; then
     pip install imageio imageio-ffmpeg tqdm easydict opencv-python-headless ninja trimesh transformers gradio==6.0.1 tensorboard pandas lpips zstandard
     pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
     sudo apt install -y libjpeg-dev
-    pip install pillow-simd
+    # Use Pillow instead of pillow-simd for better compatibility
+    # (pillow-simd can cause sysroot/compiler conflicts with conda cuda-toolkit)
+    pip install Pillow
     pip install kornia timm
 fi
 
 if [ "$FLASHATTN" = true ] ; then
     if [ "$PLATFORM" = "cuda" ] ; then
-        pip install flash-attn==2.7.3
+        # Install build dependencies first (required for --no-build-isolation)
+        pip install packaging psutil ninja setuptools wheel
+        # Use --no-build-isolation to allow access to torch during build
+        pip install flash-attn==2.7.3 --no-build-isolation
     elif [ "$PLATFORM" = "hip" ] ; then
         echo "[FLASHATTN] Prebuilt binaries not found. Building from source..."
         mkdir -p /tmp/extensions
