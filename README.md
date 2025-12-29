@@ -66,7 +66,7 @@ Data processing is streamlined for instant conversions that are fully **renderin
 ### Installation Steps
 1. Clone the repo:
     ```sh
-    git clone -b main https://github.com/microsoft/TRELLIS.2.git --recursive
+    git clone -b verify-dec-2025 https://github.com/tsuyoshimishina/TRELLIS.2.git --recursive
     cd TRELLIS.2
     ```
 
