@@ -17,6 +17,7 @@ from trellis2.pipelines import Trellis2ImageTo3DPipeline
 from trellis2.renderers import EnvMap
 from trellis2.utils import render_utils
 import o_voxel
+import time
 
 
 MAX_SEED = np.iinfo(np.int32).max
@@ -368,6 +369,8 @@ def image_to_3d(
     progress=gr.Progress(track_tqdm=True),
 ) -> str:
     # --- Sampling ---
+    torch.cuda.synchronize()
+    t_start = time.perf_counter()
     outputs, latents = pipeline.run(
         image,
         seed=seed,
@@ -397,6 +400,9 @@ def image_to_3d(
         }[resolution],
         return_latent=True,
     )
+    torch.cuda.synchronize()
+    t_inference = time.perf_counter() - t_start
+    print(f"[Timing] Inference (Flow Model + Decode): {t_inference:.2f}s")
     mesh = outputs[0]
     mesh.simplify(16777216) # nvdiffrast limit
     images = render_utils.render_snapshot(mesh, resolution=1024, r=2, fov=36, nviews=STEPS, envmap=envmap)
@@ -490,6 +496,10 @@ def extract_glb(
     user_dir = os.path.join(TMP_DIR, str(req.session_hash))
     shape_slat, tex_slat, res = unpack_state(state)
     mesh = pipeline.decode_latent(shape_slat, tex_slat, res)[0]
+
+    # --- Post-processing (O-Voxel -> GLB) ---
+    torch.cuda.synchronize()
+    t_start = time.perf_counter()
     glb = o_voxel.postprocess.to_glb(
         vertices=mesh.vertices,
         faces=mesh.faces,
@@ -505,6 +515,9 @@ def extract_glb(
         remesh_project=0,
         use_tqdm=True,
     )
+    torch.cuda.synchronize()
+    t_postprocess = time.perf_counter() - t_start
+    print(f"[Timing] Post-processing (O-Voxel -> GLB): {t_postprocess:.2f}s")
     now = datetime.now()
     timestamp = now.strftime("%Y-%m-%dT%H%M%S") + f".{now.microsecond // 1000:03d}"
     os.makedirs(user_dir, exist_ok=True)
